@@ -1,8 +1,8 @@
-
 from tkinter import *
 from tkinter import messagebox
 from tkinter import ttk
 from PIL import Image, ImageTk
+from conexionbd import insertar_medico
 
 class Gestionmedico(Frame):
 
@@ -96,18 +96,18 @@ class Gestionmedico(Frame):
         # Treeview para mostrar la tabla de Medicos dentro del frame_tabla
         self.tree = ttk.Treeview(
             frame_tabla,
-            columns=("codigo", "Apellido", "DNI"),
+            columns=("nombre", "Apellido", "DNI"),
             show="headings",
             height=5,
         )
 
         # Títulos de columnas
-        self.tree.heading("codigo", text="Nombre")
+        self.tree.heading("nombre", text="Nombre")
         self.tree.heading("Apellido", text="Apellido")
         self.tree.heading("DNI", text="DNI")
 
         # Ancho de las columnas y datos centrados
-        self.tree.column("codigo", anchor="center", width=250)
+        self.tree.column("nombre", anchor="center", width=250)
         self.tree.column("Apellido", anchor="center", width=350)
         self.tree.column("DNI", anchor="center", width=250)
 
@@ -166,7 +166,7 @@ class Gestionmedico(Frame):
         ventana_agregar = Toplevel(self)
         ventana_agregar.title("Agregar medico")
         ventana_agregar.config(bg="#e4c09f")
-        ventana.resizable(False, False)
+        ventana_agregar.resizable(False, False)
 
         frame_agregar = LabelFrame(
             ventana_agregar,
@@ -345,62 +345,22 @@ class Gestionmedico(Frame):
         else:
             messagebox.showinfo("Atención", "Eliminación cancelada.")
 
-    def agregar_medico(self):
-        ventana_agregar = Toplevel(self)
-        ventana_agregar.title("Agregar medico")
-        ventana_agregar.config(bg="#e4c09f")
-        ventana.resizable(False, False)
+    def guardar_nuevo_medico(self, entradas, ventana):
+        nombre = entradas["Nombre"].get()
+        apellido = entradas["Apellido"].get()
+        dni = entradas["DNI"].get()
+        telefono = entradas["Telefono"].get()
+        matricula = entradas["Matricula"].get()
+        especialidad = entradas["Especialidad"].get()
 
-        frame_agregar = LabelFrame(
-            ventana_agregar,
-            text="Agregar Nuevo medico",
-            font=("Robot", 11),
-            padx=10,
-            pady=10,
-            bg="#c9c2b2",
-        )
-        frame_agregar.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
-
-        campos = ["Nombre", "Apellido", "DNI", "Telefono", "Matricula", "Especialidad"]
-        entradas = {}
-
-        vcmd_letras = ventana_agregar.register(self.solo_letras)
-        vcmd_numeros = ventana_agregar.register(self.solo_numeros)
-
-        for i, campo in enumerate(campos):
-            etiquetas = Label(
-                frame_agregar, text=campo + ":", bg="#c9c2b2", font=("Robot", 10)
-            )
-            etiquetas.grid(row=i, column=0, padx=10, pady=5)
-            entry = Entry(frame_agregar, width=40, font=("Robot", 10))
-            if campo in ["Nombre", "Apellido"]:
-                entry.config(validate="key", validatecommand=(vcmd_letras, '%S'))
-            elif campo in ["DNI", "Telefono"]:
-                entry.config(validate="key", validatecommand=(vcmd_numeros, '%S'))
-            entry.grid(row=i, column=1, padx=10, pady=5)
-            entradas[campo] = entry
-
-        btn_nuevo_medico = Button(
-            frame_agregar,
-            text="Agregar",
-            font=("Robot", 10),
-            bg="#e6c885",
-            command=lambda: self.guardar_nuevo_medico(entradas, ventana_agregar),
-        )
-        btn_nuevo_medico.grid(row=len(campos), column=0, columnspan=2, padx=10, pady=10)
-
-    def guardar_nuevo_medico(self, entry, ventana):
-        codigo = entry["Nombre"].get()  # Obtenemos los valores que el usuario ingresó.
-        Apellido = entry["Apellido"].get()
-        DNI = entry["DNI"].get()
-        Telefono = entry["Telefono"].get()
-        Matricula = entry["Matricula"].get()
-        descripcion = entry["Especialidad"].get()
-        # Validar datos y agregar al Treeview
-        if codigo and Apellido and DNI and Telefono and Matricula and descripcion:
-            self.tree.insert("", "end", values=(codigo, Apellido, DNI, Telefono, Matricula, descripcion))
-            messagebox.showinfo("Información", "medico agregado correctamente.")
-            ventana.destroy()
+        if nombre and apellido and dni and telefono and matricula and especialidad:
+            try:
+                insertar_medico(nombre, apellido, matricula, telefono, dni)
+                self.tree.insert("", "end", values=(nombre, apellido, dni, telefono, matricula, especialidad))
+                messagebox.showinfo("Información", "Médico agregado correctamente.")
+                ventana.destroy()
+            except Exception as e:
+                messagebox.showerror("Error", f"No se pudo agregar el médico: {e}")
         else:
             messagebox.showwarning("Atención", "Complete todos los campos.")
 
@@ -418,11 +378,11 @@ class Gestionmedico(Frame):
         # Filtramos la búsqueda
         for item in self.tree.get_children():
             valores = self.tree.item(item, 'values')  # Obtenemos los valores de cada fila
-            codigo = valores[0].lower()  # Código del médico en minúsculas
+            nombre = valores[0].lower()  # Código del médico en minúsculas
             apellido = valores[1].lower()  # Apellido del médico en minúsculas
 
             # Verificamos si el texto de búsqueda está en el código o el apellido
-            if busqueda in codigo or busqueda in apellido:
+            if busqueda in nombre or busqueda in apellido:
                 medico_encontrado = True
             else:
                 self.tree.delete(item)  # Eliminar los médicos que no coinciden
