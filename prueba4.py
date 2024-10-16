@@ -112,9 +112,7 @@ class Gestionmedico(Frame):
         self.tree.column("DNI", anchor="center", width=250)
 
         # Ejemplo
-        self.tree.insert("", "end", values=("Ramiro", "Perez", "44567895"))
-        self.tree.insert("", "end", values=("Jorge", "Barzola", "20445726"))
-        self.tree.insert("", "end", values=("Jorge", "Sosa", "17000929"))
+    
 
         # Grid del frame_tabla
         self.tree.grid(row=0, column=0, sticky="nsew")
@@ -329,19 +327,33 @@ class Gestionmedico(Frame):
     def eliminar_medico(self):
         seleccion = self.tree.selection()
         if not seleccion:
-            messagebox.showwarning(
-                "Atención", "Por favor, seleccione un medico para eliminar."
-            )
+            messagebox.showwarning("Atención", "Por favor, seleccione un medico.")
             return
-        respuesta = messagebox.askyesno(
-            "Confirmar Eliminación", 
-            "¿Está seguro de que desea eliminar el medico seleccionado?",
-        )
+
+        medico_seleccionado = self.tree.item(seleccion[0], "values")
+        id_medico = medico_seleccionado[0]  # Asumiendo que el ID es el primer valor
+
+        respuesta = messagebox.askyesno("Confirmar", "¿Está seguro de que desea eliminar este médico?")
         if respuesta:
-            self.tree.delete(seleccion)
-            messagebox.showinfo("Atención", "medico eliminado correctamente.")
-        else:
-            messagebox.showinfo("Atención", "Eliminación cancelada.")
+            try:
+                conexion = mysql.connector.connect(
+                    host="localhost",
+                    user="Gaspar",
+                    password="yarco7mysql",
+                    database="hospital"
+                )
+                cursor = conexion.cursor()
+                cursor.execute("DELETE FROM medico WHERE id_medico = %s", (id_medico,))
+                conexion.commit()
+                messagebox.showinfo("Éxito", "Médico eliminado correctamente.")
+                self.tree.delete(seleccion[0])  # Eliminar de la interfaz
+            except mysql.connector.Error as err:
+                messagebox.showerror("Error", f"Error al eliminar el médico: {err}")
+            finally:
+                if conexion.is_connected():
+                    cursor.close()
+                    conexion.close()
+
 
     def guardar_nuevo_medico(self, entradas, ventana):
         nombre = entradas["Nombre"].get()
@@ -392,7 +404,7 @@ class Gestionmedico(Frame):
         try:
             conexion = obtener_conexion()
             cursor = conexion.cursor()
-            cursor.execute("SELECT id, nombre, apellido, dni, telefono, matricula, descripcion FROM medico")
+            cursor.execute("SELECT nombre, apellido, documento, telefono, matricula FROM medico")
             medicos = cursor.fetchall()
             for medico in medicos:
                 self.tree.insert("", "end", values=medico)
